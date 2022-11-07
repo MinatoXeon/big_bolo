@@ -1,3 +1,4 @@
+#include "bolo.h"
 
 #include <algorithm>
 #include <fstream>
@@ -5,10 +6,54 @@
 #include <thread>
 #include <unordered_set>
 
-#include "copy.h"
+#include "libfswatch/c++/libfswatch_exception.hpp"
+#include "libfswatch/c++/monitor.hpp"
+#include "libfswatch/c++/monitor_factory.hpp"
+#include "util.h"
 
 namespace bolo {
 using namespace std::string_literals;
+
+Result<std::unique_ptr<Bolo>, std::string> Bolo::LoadFromJsonFile(const fs::path &path) try {
+  json config;
+
+  // read config
+  std::ifstream f(path);
+  if (!f.is_open()) {
+    return Err("failed to open " + path.string());
+  }
+  f >> config;
+
+  // parse config
+  auto next_id = config.at("next_id").get<BackupFileId>();
+  auto list = config.at("backup_list").get<BackupList>();
+  auto enable_auto_update = config.at("enable_auto_update").get<bool>();
+  fs::path backup_dir = config.at("backup_dir").get<std::string>();
+  backup_dir = backup_dir.lexically_normal();
+
+  fs::path cloud_path = config.at("cloud_mount_path").get<std::string>();
+  cloud_path = cloud_path.lexically_normal();
+
+  // create and check backup_dir
+  fs::create_directories(backup_dir);
+  // if backup_path exists
+  if (fs::exists(backup_dir)) {
+    // check if backup_path is a dir
+    if (fs::status(backup_dir).type() != fs::file_type::directory)
+      return Err("the backup_path is not a directory: "s + backup_dir.string());
+  } else {
+    return Err("failed to create backup directory: "s + backup_dir.string());
+  }
+
+  return Ok(std::unique_ptr<Bolo>(new Bolo(path, std::move(config), std::move(list), next_id,
+                                           backup_dir, cloud_path, enable_auto_update)));
+} catch (const fs::filesystem_error &e) {
+  return Err("filesystem error: "s + e.what());
+} catch (const json::out_of_range &e) {
+  return Err("json out_of_range: "s + e.what());
+} catch (const json::type_error &e) {
+  return Err("json type_error: "s + e.what());
+}
 
 Bolo::Bolo(const fs::path &config_path, json &&config, BackupList &&m, BackupFileId next_id,
            const fs::path &backup_dir, const fs::path &cloud_path, bool enable_auto_update)
