@@ -131,3 +131,44 @@ void Bolo::MonitorCallback(const std::vector<fsw::event> &events) try {
   Log(LogLevel::Error, "fs error: "s + e.what());
 }
 
+Result<BackupFile, std::string> Bolo::Backup(const fs::path &path, bool is_compressed,
+                                             bool is_encrypted, bool enable_cloud,
+                                             const std::string &key) try {
+
+
+  backup_files_[file.id] = file;
+
+  std::string err;
+  if (auto ins = BackupImpl(file, key)) {
+    err = ins.error();
+    goto clean;
+  }
+
+  if (auto ins = UpdateConfig()) {
+    err = ins.error();
+    goto clean;
+  }
+
+  return Ok(file);
+
+clean:
+  backup_files_.erase(file.id);
+  fs::remove_all(file.backup_path);
+  return Err(err);
+} catch (const fs::filesystem_error &e) {
+  return Err("filesystem error: "s + e.what());
+}
+
+  std::thread([f, temp]() {
+    try {
+      bolo_copy::Copy copy;
+      auto res = copy.FullCopy(temp, f.backup_path);
+    } catch (const fs::filesystem_error &e) {
+      Log(LogLevel::Error, "copy error: "s + e.what());
+    }
+  }).detach();
+  return Safe;
+}
+
+};  // namespace bolo
+
