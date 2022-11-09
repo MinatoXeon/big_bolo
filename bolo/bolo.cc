@@ -6,6 +6,7 @@
 #include <thread>
 #include <unordered_set>
 
+#include "copy.h"
 #include "libfswatch/c++/libfswatch_exception.hpp"
 #include "libfswatch/c++/monitor.hpp"
 #include "libfswatch/c++/monitor_factory.hpp"
@@ -134,7 +135,18 @@ void Bolo::MonitorCallback(const std::vector<fsw::event> &events) try {
 Result<BackupFile, std::string> Bolo::Backup(const fs::path &path, bool is_compressed,
                                              bool is_encrypted, bool enable_cloud,
                                              const std::string &key) try {
+  auto id = NextId();
+  // remove '/' in directory path
+  auto p = path.string().back() == '/' ? path.parent_path() : path;
 
+  std::string filename = p.lexically_relative(p.parent_path());
+
+  // backup filename = filename + id
+  auto backup_path = ((enable_cloud ? cloud_path_ : backup_dir_) / (std::to_string(id) + filename));
+
+  auto file = BackupFile{
+      id, filename, p, backup_path, GetTimestamp(), is_compressed, is_encrypted, enable_cloud,
+  };
 
   backup_files_[file.id] = file;
 
