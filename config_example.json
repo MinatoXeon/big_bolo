@@ -1,0 +1,7 @@
+{
+    "backup_dir": ".backup",
+    "backup_list": [],
+    "cloud_mount_path": "请输入需要挂载的文件夹的路径",
+    "enable_auto_update": true,
+    "next_id": 0
+}
