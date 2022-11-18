@@ -38,13 +38,25 @@ sudo dpkg -i '/home/minatoxeon/桌面/rclone-v1.60.0-linux-amd64.deb'
 
 也可使用命令行命令“curl https://rclone.org/install.sh | sudo bash”来进行安装rclone
 
-//运行rclone相关服务时报错安装的依赖包
+//运行rclone相关服务时报错安装的依赖包fuse
 
 sudo apt-get install fuse
 
 //rclone配置教程
 
 https://www.bilibili.com/read/cv16130034/
+
+//运行rcolne时若fuse.conf报错
+
+就将该文件的最后一行的井号去掉，变成“user_allow_other“即可
+
+//rclone服务启动命令格式
+
+rclone mount 【DriveName】:/ 【需要挂载的文件夹路径】 --allow-other --allow-non-empty --vfs-cache-mode writes
+
+//rclone服务启动命令示例
+
+rclone mount big_bolo:/ /home/minatoxeon/桌面/bolo-master/big_bolo_mount --allow-other --allow-non-empty --vfs-cache-mode writes
 
 //软件运行命令
 
